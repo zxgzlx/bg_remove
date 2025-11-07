@@ -1,3 +1,4 @@
+import os
 import torch
 from transformers import AutoModelForImageSegmentation
 
@@ -29,3 +30,29 @@ def load_model(pretrained_model_name_or_path: str, device: str) -> AutoModelForI
     """
     return AutoModelForImageSegmentation.from_pretrained(
         pretrained_model_name_or_path, trust_remote_code=True, local_files_only=True).eval().to(device)
+
+
+def get_file_name_without_ext(file_path: str) -> str:
+    r"""
+    获取文件名（不带扩展名）
+
+    Args:
+        file_path (str): 文件路径
+
+    Returns:
+        str: 文件名（不带扩展名）
+    """
+    return os.path.splitext(os.path.basename(file_path))[0]
+
+
+def get_file_name_with_ext(file_path: str) -> str:
+    r"""
+    获取文件名（带扩展名）
+
+    Args:
+        file_path (str): 文件路径
+
+    Returns:
+        str: 文件名（带扩展名）
+    """
+    return os.path.basename(file_path)
