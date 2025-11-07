@@ -126,3 +126,18 @@ image.putalpha(mask)
 image.save("no_bg_image.png")
 
 ```
+
+## Web 可视化界面
+
+项目内置了一个使用 FastAPI + Vue 的简易前端，可以在浏览器中上传图片、切换模型并查看/下载抠图结果。该 Web 服务不会将上传或输出图片写入服务器磁盘，所有处理结果会以内存数据的形式直接返回到前端。
+
+1. 安装依赖：`pip install -r requirements.txt`
+2. 启动服务：`uvicorn web_app:app --host 0.0.0.0 --port 8000 --reload`
+3. 浏览器访问 `http://localhost:8000`
+
+界面功能：
+
+- 选择 RMBG 1.4 或 2.0 模型版本
+- 上传图片并实时查看原图
+- 在线展示抠图生成的 mask 与结果图
+- 抠图结果支持鼠标滚轮缩放预览，并可一键下载

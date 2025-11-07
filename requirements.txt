@@ -4,6 +4,8 @@ pillow
 numpy
 typing
 scikit-image
-hugginface_hub
 transformers>=4.39.1
 kornia
+fastapi
+uvicorn
+python-multipart
