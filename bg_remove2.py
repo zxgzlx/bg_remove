@@ -24,7 +24,25 @@ class RMBG2:
         filename_without_exe = get_file_name_without_ext(input_image_path)
         mask_path = f"output/{filename_without_exe}_mask_2.0.png"
         result_path = f"output/{filename_without_exe}_2.0.png"
-        mask_img.save(mask_path)
+        # mask_img.save(mask_path)
+        result_img.save(result_path)
+        return {
+            "original_path": input_image_path,
+            "mask_path": mask_path,
+            "result_path": result_path,
+        }
+
+    def batch_remove_bg(self, input_image, input_image_path: str, suffix: str = ""):
+        mask_img, result_img = self.remove_bg_image(input_image)
+
+        os.makedirs("output", exist_ok=True)
+        filename_without_exe = get_file_name_without_ext(input_image_path)
+        mask_path = f"output/rmgb2/mask/{filename_without_exe}/{filename_without_exe}{suffix}.png"
+        result_path = f"output/rmgb2/result/{filename_without_exe}/{filename_without_exe}{suffix}.png"
+        # 如果result_path的父目录不存在，则创建
+        # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
+        # mask_img.save(mask_path)
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
         result_img.save(result_path)
         return {
             "original_path": input_image_path,
@@ -34,7 +52,8 @@ class RMBG2:
 
     def remove_bg_image(self, image: Image.Image) -> Tuple[Image.Image, Image.Image]:
         rgba_image = image.convert("RGBA")
-        input_images = self.preprocess_image(rgba_image.convert("RGB"), self.device)
+        input_images = self.preprocess_image(
+            rgba_image.convert("RGB"), self.device)
         result = self.model_inference(input_images)
         mask = self.postprocess_image(result, rgba_image.size)
         result_image = rgba_image.copy()
@@ -47,7 +66,8 @@ class RMBG2:
             [
                 transforms.Resize(image_size),
                 transforms.ToTensor(),
-                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                transforms.Normalize([0.485, 0.456, 0.406], [
+                                     0.229, 0.224, 0.225]),
             ]
         )
         return transform_image(image).unsqueeze(0).to(device)

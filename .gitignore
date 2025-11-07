@@ -2,6 +2,8 @@
 /models/
 # 忽略输出目录
 /output/
+# 忽略输入目录
+/input/
 
 # 其他忽略规则
 __pycache__/
