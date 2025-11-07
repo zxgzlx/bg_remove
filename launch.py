@@ -17,14 +17,20 @@ def main():
     image_path = "input/partner_1_0000.png"
     version = args.version
 
+    rmbg = None
     if version == 1:
         # 使用RMBG1.4模型
         print("Using RMBG1...")
-        RMBG1(image_path)
+        rmbg = RMBG1()
     elif version == 2:
         # 使用RMBG2.0模型
         print("Using RMBG2...")
-        RMBG2(image_path)
+        rmbg = RMBG2()
+
+    if rmbg is None:
+        print("Invalid model version")
+        return
+    rmbg.remove_bg(image_path)
 
 
 if __name__ == '__main__':

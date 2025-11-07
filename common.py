@@ -14,6 +14,8 @@ def get_device() -> str:
     # 判断device是否为GPU
     if device == "cuda":
         print("GPU is running")
+    else:
+        print("CPU is running")
     return device
 
 

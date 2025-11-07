@@ -10,15 +10,18 @@ from common import get_device, get_file_name_without_ext, load_model
 
 class RMBG1:
     model = None
+    device = None
 
-    def __init__(self, input_image_path):
-        device = get_device()
-        self.model = load_model("models/briaai/RMBG-1.4", device)
+    def __init__(self):
+        self.device = get_device()
+        self.model = load_model("models/briaai/RMBG-1.4", self.device)
+
+    def remove_bg(self, input_image_path):
         # 第一次读取图片，获取图片尺寸
         orig_im = io.imread(input_image_path)
         orig_im_size = orig_im.shape[0:2]
         # 预处理图片
-        image = self.preprocess_image(orig_im, device)
+        image = self.preprocess_image(orig_im, self.device)
 
         # 模型推理
         result = self.model_inference(image)

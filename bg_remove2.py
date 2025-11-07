@@ -7,14 +7,17 @@ from common import get_device, get_file_name_without_ext, load_model
 
 class RMBG2:
     model = None
+    device = None
 
-    def __init__(self, input_image_path):
-        device = get_device()
-        self.model = load_model("models/briaai/RMBG-2.0", device)
+    def __init__(self):
+        self.device = get_device()
+        self.model = load_model("models/briaai/RMBG-2.0", self.device)
+
+    def remove_bg(self, input_image_path):
         # 加载图片
         image = Image.open(input_image_path)
         # 预处理图片
-        input_images = self.preprocess_image(image, device)
+        input_images = self.preprocess_image(image, self.device)
         # 模型推理
         result = self.model_inference(input_images)
         # 后处理图片
