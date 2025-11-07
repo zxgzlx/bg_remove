@@ -1,339 +1,649 @@
 <!DOCTYPE html>
 <html lang="zh">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>背景抠图演示</title>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <style>
-    :root {
-      color-scheme: light dark;
-      font-family: "Segoe UI", "PingFang SC", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-      background-color: #0f172a;
-      color: #e2e8f0;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at top, #1e293b, #020617 60%);
-    }
-
-    #app {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 32px 16px 64px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 2rem;
-    }
-
-    .panel {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(248, 250, 252, 0.08);
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 10px 40px rgba(15, 23, 42, 0.4);
-      backdrop-filter: blur(10px);
-    }
-
-    form {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-    }
-
-    label {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.9rem;
-      gap: 6px;
-    }
-
-    select,
-    input[type="file"],
-    button {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      border-radius: 8px;
-      padding: 10px 12px;
-      color: inherit;
-      font-size: 1rem;
-    }
-
-    button {
-      cursor: pointer;
-      background: #2563eb;
-      border-color: #3b82f6;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-
-    button:not(:disabled):hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
-    }
-
-    .error {
-      margin-top: 12px;
-      color: #f87171;
-    }
-
-    .status {
-      margin-top: 12px;
-      color: #38bdf8;
-    }
-
-    .results,
-    .preview {
-      margin-top: 32px;
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-
-    .card {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 14px;
-      padding: 16px;
-      min-height: 320px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .card h3 {
-      margin-top: 0;
-      font-size: 1rem;
-      letter-spacing: 0.04em;
-    }
-
-    .img-frame {
-      flex: 1;
-      border-radius: 12px;
-      overflow: hidden;
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px dashed rgba(148, 163, 184, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 8px;
-    }
-
-    .img-frame img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transition: transform 0.18s ease;
-    }
-
-    .download {
-      margin-top: 12px;
-      text-align: right;
-    }
-
-    .download a {
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      text-decoration: none;
-      color: inherit;
-      background: rgba(37, 99, 235, 0.18);
-    }
-
-    .zoom-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-
-    .zoom-info button {
-      padding: 4px 12px;
-      font-size: 0.8rem;
-      background: transparent;
-      border-color: rgba(148, 163, 184, 0.4);
-    }
-
-    @media (max-width: 640px) {
-      form {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .card {
-        min-height: 260px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <div id="app">
-    <header>
-      <h1>AI 背景抠图演示</h1>
-      <p>上传图片，选择模型版本，在线查看原图 / Mask / 抠图结果</p>
-    </header>
-
-    <section class="panel">
-      <form @submit.prevent="handleSubmit">
-        <label>
-          模型版本
-          <select v-model.number="form.version">
-            <option value="1">RMBG v1.4</option>
-            <option value="2">RMBG v2.0</option>
-          </select>
-        </label>
-
-        <label style="flex: 1;">
-          上传图片
-          <input type="file" accept="image/*" @change="onFileChange" />
-        </label>
-
-        <button type="submit" :disabled="!form.file || loading">
-          {{ loading ? "处理中..." : "开始抠图" }}
-        </button>
-      </form>
-
-      <p class="status" v-if="loading">模型正在运行，请稍候...</p>
-      <p class="error" v-if="error">{{ error }}</p>
-    </section>
-
-    <section class="preview" v-if="currentOriginal">
-      <h2>原图</h2>
-      <div class="card">
-        <div class="img-frame">
-          <img :src="currentOriginal" alt="原图预览" />
-        </div>
-      </div>
-    </section>
-
-    <section class="results" v-if="images">
-      <div class="cards">
-        <div class="card">
-          <h3>Mask</h3>
-          <div class="img-frame">
-          <img :src="images.maskDataUrl" alt="抠图 Mask" />
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="zoom-info">
-            <span>滚轮缩放抠图预览</span>
-            <button type="button" @click="resetZoom" :disabled="zoom === 1">重置</button>
-          </div>
-          <div class="img-frame" @wheel.prevent="handleWheel">
-            <img :src="images.resultDataUrl" alt="抠图结果" :style="{ transform: `scale(${zoom})` }" />
-          </div>
-          <div class="download">
-            <a :href="images.resultDataUrl" :download="images.downloadName">下载抠图</a>
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <script>
-    const { createApp } = Vue;
-
-    createApp({
-      data() {
-        return {
-          form: {
-            version: 1,
-            file: null,
-          },
-          previewUrl: "",
-          loading: false,
-          error: "",
-          images: null,
-          zoom: 1,
-        };
-      },
-      computed: {
-        currentOriginal() {
-          return this.images?.originalDataUrl || this.previewUrl;
-        },
-      },
-      methods: {
-        onFileChange(event) {
-          const file = event.target.files?.[0];
-          this.form.file = file || null;
-          this.images = null;
-          this.error = "";
-          this.zoom = 1;
-          if (this.previewUrl) {
-            URL.revokeObjectURL(this.previewUrl);
-          }
-          this.previewUrl = file ? URL.createObjectURL(file) : "";
-        },
-        async handleSubmit() {
-          if (!this.form.file) {
-            this.error = "请先选择图片";
-            return;
-          }
-          this.loading = true;
-          this.error = "";
-          this.images = null;
-
-          const formData = new FormData();
-          formData.append("model_version", this.form.version);
-          formData.append("image", this.form.file);
-
-          try {
-            const response = await fetch("/api/remove-bg", {
-              method: "POST",
-              body: formData,
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-              throw new Error(payload.detail || "抠图失败");
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>背景抠图 & 配置面板</title>
+        <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+        <style>
+            :root {
+                color-scheme: light dark;
+                font-family: 'Segoe UI', 'PingFang SC', system-ui, -apple-system, BlinkMacSystemFont,
+                    'Helvetica Neue', sans-serif;
+                background-color: #0f172a;
+                color: #e2e8f0;
             }
-            this.images = payload;
-            this.zoom = 1;
-          } catch (err) {
-            this.error = err.message || "网络异常";
-          } finally {
-            this.loading = false;
-          }
-        },
-        handleWheel(event) {
-          if (!this.images) return;
-          const delta = event.deltaY < 0 ? 0.15 : -0.15;
-          const nextZoom = Math.min(4, Math.max(0.3, this.zoom + delta));
-          this.zoom = Number(nextZoom.toFixed(2));
-        },
-        resetZoom() {
-          this.zoom = 1;
-        },
-      },
-      beforeUnmount() {
-        if (this.previewUrl) {
-          URL.revokeObjectURL(this.previewUrl);
-        }
-      },
-    }).mount("#app");
-  </script>
-</body>
 
+            body {
+                margin: 0;
+                min-height: 100vh;
+                background: radial-gradient(circle at top, #1e293b, #020617 60%);
+            }
+
+            #app {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 32px 16px 64px;
+            }
+
+            header {
+                text-align: center;
+                margin-bottom: 24px;
+            }
+
+            header h1 {
+                margin: 0;
+                font-size: 2rem;
+            }
+
+            .panel {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(248, 250, 252, 0.08);
+                border-radius: 16px;
+                padding: 24px;
+                box-shadow: 0 10px 40px rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(10px);
+                margin-top: 32px;
+            }
+
+            form {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: center;
+            }
+
+            label {
+                display: flex;
+                flex-direction: column;
+                font-size: 0.9rem;
+                gap: 6px;
+            }
+
+            select,
+            input[type='file'],
+            input[type='text'],
+            button {
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(148, 163, 184, 0.4);
+                border-radius: 8px;
+                padding: 10px 12px;
+                color: inherit;
+                font-size: 1rem;
+            }
+
+            input[type='text'] {
+                width: 100%;
+            }
+
+            button {
+                cursor: pointer;
+                background: #2563eb;
+                border-color: #3b82f6;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+                box-shadow: none;
+            }
+
+            button:not(:disabled):hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 25px rgba(37, 99, 235, 0.35);
+            }
+
+            .error {
+                margin-top: 12px;
+                color: #f87171;
+            }
+
+            .status {
+                margin-top: 12px;
+                color: #38bdf8;
+            }
+
+            .helper-text {
+                font-size: 0.85rem;
+                color: #94a3b8;
+                margin-top: 8px;
+            }
+
+            .results,
+            .preview {
+                margin-top: 32px;
+            }
+
+            .cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+            }
+
+            .card {
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 14px;
+                padding: 16px;
+                min-height: 320px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .card h3 {
+                margin-top: 0;
+                font-size: 1rem;
+                letter-spacing: 0.04em;
+            }
+
+            .img-frame {
+                flex: 1;
+                border-radius: 12px;
+                overflow: hidden;
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px dashed rgba(148, 163, 184, 0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px;
+            }
+
+            .img-frame img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                transition: transform 0.18s ease;
+            }
+
+            .download {
+                margin-top: 12px;
+                text-align: right;
+            }
+
+            .download a {
+                padding: 8px 14px;
+                border-radius: 8px;
+                border: 1px solid rgba(148, 163, 184, 0.4);
+                text-decoration: none;
+                color: inherit;
+                background: rgba(37, 99, 235, 0.18);
+            }
+
+            .zoom-info {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+                font-size: 0.85rem;
+                color: #94a3b8;
+            }
+
+            .zoom-info button {
+                padding: 4px 12px;
+                font-size: 0.8rem;
+                background: transparent;
+                border-color: rgba(148, 163, 184, 0.4);
+            }
+
+            .config-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+                margin-top: 16px;
+            }
+
+            .config-item {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .config-item-actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+            .config-actions {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-top: 20px;
+            }
+
+            .config-select select {
+                min-width: 200px;
+            }
+
+            .run-panel .inline-selects {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+
+            .run-panel .inline-selects label {
+                flex: 1;
+                min-width: 180px;
+            }
+
+            .run-overrides {
+                margin-top: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            @media (max-width: 640px) {
+                form {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .card {
+                    min-height: 260px;
+                }
+
+                .config-actions {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="app">
+            <header>
+                <h1>AI 背景抠图 & 任务控制台</h1>
+                <p>上传图片体验模型，或直接在下方配置 launch.py 并一键处理</p>
+            </header>
+
+            <section class="panel">
+                <form @submit.prevent="handleSubmit">
+                    <label>
+                        在线体验模型版本
+                        <select v-model.number="form.version">
+                            <option value="1">RMBG v1.4</option>
+                            <option value="2">RMBG v2.0</option>
+                        </select>
+                    </label>
+
+                    <label style="flex: 1">
+                        上传图片体验
+                        <input type="file" accept="image/*" @change="onFileChange" />
+                    </label>
+
+                    <button type="submit" :disabled="!form.file || loading">
+                        {{ loading ? "处理中..." : "开始抠图" }}
+                    </button>
+                </form>
+
+                <p class="status" v-if="loading">模型正在运行，请稍候...</p>
+                <p class="error" v-if="error">{{ error }}</p>
+            </section>
+
+            <section class="preview" v-if="currentOriginal">
+                <h2>原图</h2>
+                <div class="card">
+                    <div class="img-frame">
+                        <img :src="currentOriginal" alt="原图预览" />
+                    </div>
+                </div>
+            </section>
+
+            <section class="results" v-if="images">
+                <div class="cards">
+                    <div class="card">
+                        <h3>Mask</h3>
+                        <div class="img-frame">
+                            <img :src="images.maskDataUrl" alt="抠图 Mask" />
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="zoom-info">
+                            <span>滚轮缩放抠图预览</span>
+                            <button type="button" @click="resetZoom" :disabled="zoom === 1">
+                                重置
+                            </button>
+                        </div>
+                        <div class="img-frame" @wheel.prevent="handleWheel">
+                            <img
+                                :src="images.resultDataUrl"
+                                alt="抠图结果"
+                                :style="{ transform: `scale(${zoom})` }"
+                            />
+                        </div>
+                        <div class="download">
+                            <a :href="images.resultDataUrl" :download="images.downloadName">
+                                下载抠图
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel config-panel">
+                <h2>配置 config.json</h2>
+                <p class="helper-text">
+                    支持手动输入或点击“浏览”打开资源管理器来写入路径，保存后可直接用于 launch.py。
+                </p>
+
+                <div class="config-grid inline-selects">
+                    <label class="config-select">
+                        默认模型版本
+                        <select v-model.number="config.model_index">
+                            <option value="1">RMBG v1.4</option>
+                            <option value="2">RMBG v2.0</option>
+                        </select>
+                    </label>
+                    <label class="config-select">
+                        处理类型
+                        <select v-model="config.type">
+                            <option value="image">image（单图）</option>
+                            <option value="video">video（视频/目录）</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="config-grid config-paths">
+                    <div class="config-item" v-for="field in configFields" :key="field.key">
+                        <label>
+                            {{ field.label }}
+                            <input
+                                type="text"
+                                :placeholder="field.placeholder"
+                                v-model="config[field.key]"
+                            />
+                        </label>
+                        <div class="config-item-actions">
+                            <button
+                                type="button"
+                                v-for="mode in field.modes"
+                                :key="mode"
+                                @click="pickPath(field, mode)"
+                                :disabled="pathSelecting === `${field.key}:${mode}`"
+                            >
+                                {{ pathSelecting === `${field.key}:${mode}` ? "选择中..." : mode ===
+                                "directory" ? "选目录" : "选文件" }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <button type="button" @click="saveConfig()" :disabled="configSaving">
+                        {{ configSaving ? "保存中..." : "保存配置" }}
+                    </button>
+                    <span class="status" v-if="configMessage">{{ configMessage }}</span>
+                    <span class="error" v-if="configError">{{ configError }}</span>
+                </div>
+
+                <p class="helper-text" v-if="configLoading">正在读取配置...</p>
+            </section>
+
+            <section class="panel run-panel">
+                <h2>一键调用 launch.py</h2>
+                <p class="helper-text">
+                    使用上方配置直接执行 launch.main()。执行成功后会直接保存配置 config.json。
+                </p>
+
+                <!-- <div class="run-overrides">
+        <label v-if="config.type === 'image'">
+          覆盖图片路径（可选）
+          <input type="text" placeholder="留空则使用配置中的 input_image_path" v-model="runOverrides.imagePath" />
+        </label>
+
+        <label v-if="config.type === 'video'">
+          覆盖视频/目录路径（可选）
+          <input type="text" placeholder="留空则使用配置中的 input_video_path" v-model="runOverrides.videoPath" />
+        </label>
+      </div> -->
+
+                <div class="config-actions">
+                    <button type="button" @click="runProcessing" :disabled="runState.loading">
+                        {{ runState.loading ? "执行中..." : "一键处理" }}
+                    </button>
+                    <span class="status" v-if="runState.message">{{ runState.message }}</span>
+                    <span class="error" v-if="runState.error">{{ runState.error }}</span>
+                </div>
+            </section>
+        </div>
+
+        <script>
+            const CONFIG_FIELDS = [
+                {
+                    key: 'input_image_path',
+                    label: '默认图片路径',
+                    placeholder: '如 input/partner.png',
+                    modes: ['file'],
+                },
+                {
+                    key: 'input_video_path',
+                    label: '视频文件或目录',
+                    placeholder: '可指定单个视频，也可填目录',
+                    modes: ['file', 'directory'],
+                },
+                {
+                    key: 'output_folder',
+                    label: '输出目录',
+                    placeholder: '例如 output/videos',
+                    modes: ['directory'],
+                },
+            ];
+
+            const { createApp } = Vue;
+
+            createApp({
+                data() {
+                    return {
+                        form: {
+                            version: 1,
+                            file: null,
+                        },
+                        previewUrl: '',
+                        loading: false,
+                        error: '',
+                        images: null,
+                        zoom: 1,
+                        configFields: CONFIG_FIELDS,
+                        config: {
+                            model_index: 1,
+                            type: 'image',
+                            input_image_path: '',
+                            input_video_path: '',
+                            output_folder: 'output',
+                        },
+                        configLoading: false,
+                        configSaving: false,
+                        configMessage: '',
+                        configError: '',
+                        pathSelecting: '',
+                        runOverrides: {
+                            imagePath: '',
+                            videoPath: '',
+                        },
+                        runState: {
+                            loading: false,
+                            message: '',
+                            error: '',
+                        },
+                    };
+                },
+                computed: {
+                    currentOriginal() {
+                        return this.images?.originalDataUrl || this.previewUrl;
+                    },
+                },
+                mounted() {
+                    this.fetchConfig();
+                },
+                methods: {
+                    onFileChange(event) {
+                        const file = event.target.files?.[0];
+                        this.form.file = file || null;
+                        this.images = null;
+                        this.error = '';
+                        this.zoom = 1;
+                        if (this.previewUrl) {
+                            URL.revokeObjectURL(this.previewUrl);
+                        }
+                        this.previewUrl = file ? URL.createObjectURL(file) : '';
+                    },
+                    async handleSubmit() {
+                        if (!this.form.file) {
+                            this.error = '请先选择图片';
+                            return;
+                        }
+                        this.loading = true;
+                        this.error = '';
+                        this.images = null;
+
+                        const formData = new FormData();
+                        formData.append('model_version', this.form.version);
+                        formData.append('image', this.form.file);
+
+                        try {
+                            const response = await fetch('/api/remove-bg', {
+                                method: 'POST',
+                                body: formData,
+                            });
+                            const payload = await response.json();
+                            if (!response.ok) {
+                                throw new Error(payload.detail || '抠图失败');
+                            }
+                            this.images = payload;
+                            this.zoom = 1;
+                        } catch (err) {
+                            this.error = err.message || '网络异常';
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    handleWheel(event) {
+                        if (!this.images) return;
+                        const delta = event.deltaY < 0 ? 0.15 : -0.15;
+                        const nextZoom = Math.min(4, Math.max(0.3, this.zoom + delta));
+                        this.zoom = Number(nextZoom.toFixed(2));
+                    },
+                    resetZoom() {
+                        this.zoom = 1;
+                    },
+                    buildConfigPayload() {
+                        return {
+                            model_index: Number(this.config.model_index) || 1,
+                            type: this.config.type || 'image',
+                            input_image_path: this.config.input_image_path || '',
+                            input_video_path: this.config.input_video_path || '',
+                            output_folder: this.config.output_folder || '',
+                        };
+                    },
+                    async fetchConfig() {
+                        this.configLoading = true;
+                        this.configError = '';
+                        try {
+                            const response = await fetch('/api/config');
+                            const payload = await response.json();
+                            if (!response.ok) {
+                                throw new Error(payload.detail || '读取配置失败');
+                            }
+                            this.config = { ...this.config, ...payload };
+                        } catch (err) {
+                            this.configError = err.message || '无法读取配置';
+                        } finally {
+                            this.configLoading = false;
+                        }
+                    },
+                    async saveConfig(silent = false) {
+                        this.configSaving = true;
+                        if (!silent) {
+                            this.configMessage = '';
+                        }
+                        this.configError = '';
+                        try {
+                            const payload = this.buildConfigPayload();
+                            const response = await fetch('/api/config', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.detail || '保存失败');
+                            }
+                            this.config = { ...this.config, ...data };
+                            if (!silent) {
+                                this.configMessage = '保存成功';
+                            }
+                        } catch (err) {
+                            this.configError = err.message || '保存失败';
+                        } finally {
+                            this.configSaving = false;
+                        }
+                    },
+                    async pickPath(field, mode) {
+                        if (this.pathSelecting) return;
+                        this.pathSelecting = `${field.key}:${mode}`;
+                        try {
+                            const response = await fetch('/api/pick-path', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ mode }),
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.detail || '无法打开资源管理器');
+                            }
+                            if (data.path) {
+                                this.config[field.key] = data.path;
+                            }
+                        } catch (err) {
+                            this.configError = err.message || '路径选择失败';
+                        } finally {
+                            this.pathSelecting = '';
+                        }
+                    },
+                    async runProcessing() {
+                        this.runState.loading = true;
+                        this.runState.error = '';
+                        this.runState.message = '';
+                        const payload = this.buildConfigPayload();
+                        if (this.config.type === 'image' && this.runOverrides.imagePath) {
+                            payload.input_image_path = this.runOverrides.imagePath;
+                        }
+                        if (this.config.type === 'video' && this.runOverrides.videoPath) {
+                            payload.input_video_path = this.runOverrides.videoPath;
+                        }
+
+                        try {
+                            const response = await fetch('/api/run-launch', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                            });
+                            const data = await response.json();
+                            if (!response.ok) {
+                                throw new Error(data.detail || '执行失败');
+                            }
+                            this.runState.message = data.message || '执行完成';
+                            this.config = { ...this.config, ...payload };
+                            this.runOverrides.imagePath = '';
+                            this.runOverrides.videoPath = '';
+                        } catch (err) {
+                            this.runState.error = err.message || '执行失败';
+                        } finally {
+                            this.runState.loading = false;
+                        }
+                    },
+                },
+                beforeUnmount() {
+                    if (this.previewUrl) {
+                        URL.revokeObjectURL(this.previewUrl);
+                    }
+                },
+            }).mount('#app');
+        </script>
+    </body>
 </html>

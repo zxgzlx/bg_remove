@@ -28,7 +28,7 @@ class VideoToFrames:
 
         frame_count = 0
         skip_frames = 0
-        skip_frames_rate = 8
+        skip_frames_rate = 1
 
         print(f"  开始处理视频: {video_name} (总帧数: {total_frames})")
 

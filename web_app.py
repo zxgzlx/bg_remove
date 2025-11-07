@@ -1,10 +1,13 @@
 import base64
+import json
+from functools import partial
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,8 +15,10 @@ from PIL import Image, UnidentifiedImageError
 
 from bg_remove import RMBG1
 from bg_remove2 import RMBG2
+import launch
 
 BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_DIR / "config.json"
 WEB_DIR = BASE_DIR / "web"
 WEB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -34,11 +39,20 @@ MODEL_FACTORIES: Dict[int, Type[Union[RMBG1, RMBG2]]] = {
     2: RMBG2,
 }
 MODEL_CACHE: Dict[int, Optional[Union[RMBG1, RMBG2]]] = {1: None, 2: None}
+CONFIG_DEFAULTS: Dict[str, Any] = {
+    "model_index": 1,
+    "type": "image",
+    "input_image_path": "",
+    "input_video_path": "",
+    "output_folder": "output",
+}
+CONFIG_KEYS = set(CONFIG_DEFAULTS.keys())
 
 
 def get_model(version: int):
     if version not in MODEL_FACTORIES:
-        raise HTTPException(status_code=400, detail="Unsupported model version")
+        raise HTTPException(
+            status_code=400, detail="Unsupported model version")
     if MODEL_CACHE[version] is None:
         MODEL_CACHE[version] = MODEL_FACTORIES[version]()
     return MODEL_CACHE[version]
@@ -61,6 +75,50 @@ def image_to_data_url(image: Image.Image) -> str:
     return bytes_to_data_url(buffer.getvalue(), "image/png")
 
 
+def load_config() -> Dict[str, Any]:
+    data = CONFIG_DEFAULTS.copy()
+    if CONFIG_PATH.exists():
+        try:
+            loaded = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                for key, value in loaded.items():
+                    if key in CONFIG_KEYS:
+                        data[key] = value
+        except json.JSONDecodeError:
+            pass
+    return data
+
+
+def save_config(payload: Dict[str, Any]) -> Dict[str, Any]:
+    config = load_config()
+    for key, value in payload.items():
+        if key in CONFIG_KEYS:
+            config[key] = value
+    CONFIG_PATH.write_text(
+        json.dumps(config, ensure_ascii=False, indent=4), encoding="utf-8"
+    )
+    return config
+
+
+def pick_path(dialog_type: str) -> str:
+    try:
+        from tkinter import filedialog, Tk  # type: ignore
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError("当前环境不支持 tkinter") from exc
+
+    root = Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    try:
+        if dialog_type == "directory":
+            path = filedialog.askdirectory()
+        else:
+            path = filedialog.askopenfilename()
+    finally:
+        root.destroy()
+    return path or ""
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     index_path = WEB_DIR / "index.html"
@@ -72,6 +130,44 @@ def index():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/config")
+def get_config():
+    return load_config()
+
+
+@app.post("/api/config")
+def update_config(config: Dict[str, Any] = Body(...)):
+    return save_config(config or {})
+
+
+@app.post("/api/pick-path")
+async def pick_config_path(payload: Dict[str, Any] = Body(...)):
+    dialog_type = payload.get("mode", "file")
+    if dialog_type not in {"file", "directory"}:
+        raise HTTPException(
+            status_code=400, detail="mode 参数必须为 file 或 directory")
+
+    try:
+        path = await run_in_threadpool(partial(pick_path, dialog_type))
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(
+            status_code=500, detail=f"无法打开资源管理器: {exc}") from exc
+
+    return {"path": path}
+
+
+@app.post("/api/run-launch")
+async def run_launch(config_override: Optional[Dict[str, Any]] = Body(default=None)):
+    to_merge = config_override or {}
+    if to_merge:
+        save_config(to_merge)
+    try:
+        await run_in_threadpool(launch.main)
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(status_code=500, detail=f"执行失败：{exc}") from exc
+    return {"status": "ok", "message": "处理完成"}
 
 
 @app.post("/api/remove-bg")
