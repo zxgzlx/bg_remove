@@ -1,0 +1,10 @@
+# 忽略模型目录
+/models/
+# 忽略输出目录
+/output/
+
+# 其他忽略规则
+__pycache__/
+*.pyc
+*.log
+.env
