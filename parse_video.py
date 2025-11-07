@@ -9,7 +9,7 @@ class VideoToFrames:
     # ---------------------------------------------------------
     # ✅ 单个视频处理（含帧进度条）
     # ---------------------------------------------------------
-    def handle_single_video(self, video_path: str, rmbg):
+    def handle_single_video(self, video_path: str, rmbg, output_folder: str):
         if rmbg is None:
             print("模型版本错误, 使用RMBG1.4模型")
             return
@@ -60,6 +60,7 @@ class VideoToFrames:
             rmbg.batch_remove_bg(
                 frame_image,
                 f"{video_name}",
+                output_folder,
                 f"_{frame_count:04d}"
             )
 
@@ -71,7 +72,7 @@ class VideoToFrames:
     # ---------------------------------------------------------
     # ✅ 批量视频处理（外部进度条）
     # ---------------------------------------------------------
-    def handle_video_folder(self, video_folder_path: str, rmbg):
+    def handle_video_folder(self, video_folder_path: str, rmbg, output_folder: str):
         if rmbg is None:
             print("Invalid model version")
             return
@@ -99,7 +100,7 @@ class VideoToFrames:
             self._print_outer_progress(idx, total)
 
             print(f"\n处理视频: {video_path}")
-            self.handle_single_video(video_path, rmbg)
+            self.handle_single_video(video_path, rmbg, output_folder)
 
         print("\n✅ 所有视频处理完成 ✅")
 

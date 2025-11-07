@@ -18,15 +18,16 @@ class RMBG1:
         self.device = get_device()
         self.model = load_model("models/briaai/RMBG-1.4", self.device)
 
-    def remove_bg(self, input_image_path: str):
+    def remove_bg(self, input_image_path: str, output_fold: str):
         orig_image = Image.open(input_image_path)
         mask_img, result_img = self.remove_bg_image(orig_image)
 
-        os.makedirs("output", exist_ok=True)
         filename_without_exe = get_file_name_without_ext(input_image_path)
-        mask_path = f"output/{filename_without_exe}_mask_1.4.png"
-        result_path = f"output/{filename_without_exe}_1.4.png"
+        mask_path = f"{output_fold}/{filename_without_exe}_mask_1.4.png"
+        result_path = f"{output_fold}/{filename_without_exe}_1.4.png"
+        # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
         # mask_img.save(mask_path)
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
         result_img.save(result_path)
         return {
             "original_path": input_image_path,
@@ -34,13 +35,12 @@ class RMBG1:
             "result_path": result_path,
         }
 
-    def batch_remove_bg(self, input_image, input_image_path: str, suffix: str = ""):
+    def batch_remove_bg(self, input_image, input_image_path: str, output_fold: str, input_suffix: str = ""):
         mask_img, result_img = self.remove_bg_image(input_image)
 
-        os.makedirs("output", exist_ok=True)
         filename_without_exe = get_file_name_without_ext(input_image_path)
-        mask_path = f"output/rmgb1/mask/{filename_without_exe}/{filename_without_exe}{suffix}.png"
-        result_path = f"output/rmgb1/result/{filename_without_exe}/{filename_without_exe}{suffix}.png"
+        mask_path = f"{output_fold}/rmgb1/mask/{filename_without_exe}/{filename_without_exe}{input_suffix}.png"
+        result_path = f"{output_fold}/rmgb1/result/{filename_without_exe}/{filename_without_exe}{input_suffix}.png"
         # 如果result_path的父目录不存在，则创建
         # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
         # mask_img.save(mask_path)

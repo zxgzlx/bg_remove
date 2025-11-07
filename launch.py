@@ -1,50 +1,63 @@
-import argparse
+import json
+from pathlib import Path
+
 from bg_remove import RMBG1
 from bg_remove2 import RMBG2
 from parse_video import VideoToFrames
 
+CONFIG_PATH = Path(__file__).with_name("config.json")
+
+
+def load_config() -> dict:
+    if not CONFIG_PATH.exists():
+        return {}
+    try:
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        print(f"配置文件解析失败，使用默认配置: {exc}")
+        return {}
+
 
 def main():
-    # 添加命令行参数
-    parser = argparse.ArgumentParser(description="Background remover")
-    parser.add_argument(
-        "image_path", help="Path to the input image", default="", nargs="?")
-    parser.add_argument("--version", "-v", type=int, default=1,
-                        choices=[1, 2],
-                        help="Select model version: 1 for RMBG1, 2 for RMBG2")
-    # ✅ 新增文件类型参数：默认 image，可选 video
-    parser.add_argument(
-        "--type", "-t",
-        type=str,
-        default="image",
-        choices=["image", "video"],
-        help="File type: 'image' (default) or 'video'"
-    )
+    config = load_config()
 
-    args = parser.parse_args()
-
-    image_path = args.image_path
+    image_path = config.get("input_image_path")
     # image_path = "input/partner_1_0000.png"
-    version = args.version
-    print("type =", args.type)
+    model_index = config.get("model_index")
+    print("model_index = ", model_index)
+    type = config.get("type")
+    print("type = ", type)
+    output_folder = config.get("output_folder")
 
     rmbg = None
-    if version == 1:
+    if model_index == 1:
         # 使用RMBG1.4模型
         print("Using RMBG1...")
         rmbg = RMBG1()
-    elif version == 2:
+    elif model_index == 2:
         # 使用RMBG2.0模型
         print("Using RMBG2...")
         rmbg = RMBG2()
 
     if rmbg is None:
-        print("Invalid model version")
+        print(f"Invalid model index {model_index}")
         return
-    if args.type == "image":
-        rmbg.remove_bg(image_path)
-    elif args.type == "video":
-        VideoToFrames().handle_video_folder("input/videos", rmbg)
+    if type == "image":
+        if not image_path:
+            print("缺少图片路径，请通过命令行或 config.json 的 input_image_path 指定")
+            return
+        rmbg.remove_bg(image_path, output_folder)
+    elif type == "video":
+        video_handler = VideoToFrames()
+        input_video_path = config.get("input_video_path")
+        print(f"input_video_path: {input_video_path}")
+        # 判断是目录模式还是文件模式
+        if Path(input_video_path).is_dir():
+            video_handler.handle_video_folder(
+                input_video_path, rmbg, output_folder)
+        else:
+            video_handler.handle_single_video(
+                input_video_path, rmbg, output_folder)
 
 
 if __name__ == '__main__':
