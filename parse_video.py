@@ -15,7 +15,7 @@ class VideoToFrames:
             return
 
         video_name = Path(video_path).stem
-        video = cv2.VideoCapture(video_path)
+        video = cv2.VideoCapture(str(video_path))
 
         if not video.isOpened():
             print(f"  错误: 无法打开视频文件 {video_path}")
