@@ -40,21 +40,25 @@ def postprocess_image(result: torch.Tensor, im_size: list) -> np.ndarray:
     return im_array
 
 
-# prepare input
+# 输入图片路径
 image_path = "input/partner_1_0000.png"
+# 第一次读取图片，获取图片尺寸
 orig_im = io.imread(image_path)
 orig_im_size = orig_im.shape[0:2]
+# 预处理图片
 image = preprocess_image(orig_im, device)
 
-# inference
+# 模型推理
 result = model_inference(image)
 
-# post process
-result_image = postprocess_image(result[0][0], orig_im_size)
+# 后处理获取遮罩数据
+mask_ndarray = postprocess_image(result[0][0], orig_im_size)
 
-# save result
-pil_mask_im = Image.fromarray(result_image)
+# 创建mask图片
+mask = Image.fromarray(mask_ndarray)
+# 将图片和mask合并
 orig_image = Image.open(image_path)
 no_bg_image = orig_image.copy()
-no_bg_image.putalpha(pil_mask_im)
+no_bg_image.putalpha(mask)
+# 保存图片
 no_bg_image.save("output/no_bg_image_1.4.png")

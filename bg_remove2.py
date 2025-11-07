@@ -39,11 +39,17 @@ def postprocess_image(result: torch.Tensor, im_size: list) -> Image:
     return mask
 
 
+# 输入图片路径
 input_image_path = 'input/partner_1_0000.png'
+# 加载图片
 image = Image.open(input_image_path)
+# 预处理图片
 input_images = preprocess_image(image, device)
+# 模型推理
 result = model_inference(input_images)
+# 后处理图片
 mask = postprocess_image(result, image.size)
+# 将图片和mask合并
 image.putalpha(mask)
-
+# 保存图片
 image.save("output/no_bg_image_2.0.png")
