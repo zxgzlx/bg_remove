@@ -2,6 +2,6 @@
     "model_index": 2,
     "type": "video",
     "input_image_path": "input/partner_1_0000.png",
-    "input_video_path": "input/videos",
-    "output_folder": "output/videos"
+    "input_video_path": "F:/images/video",
+    "output_folder": "F:/images/output"
 }

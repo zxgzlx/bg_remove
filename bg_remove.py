@@ -7,12 +7,14 @@ import torch
 import torch.nn.functional as F
 from torchvision.transforms.functional import normalize
 
-from common import get_device, get_file_name_without_ext, load_model
+from common import decontaminate_halo, get_device, get_file_name_without_ext, load_model, refine_alpha_edges
+from rembg_session import RembgSession
 
 
 class RMBG1:
     model = None
     device = None
+    session = None
 
     def __init__(self):
         self.device = get_device()
@@ -28,6 +30,13 @@ class RMBG1:
         # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
         # mask_img.save(mask_path)
         os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        if self.session is None:
+            self.session = RembgSession("isnet-general-use")
+        else:
+            self.session.set_model("isnet-general-use")
+        result_img = self.session.remove_bg(result_img)
+        result_img = refine_alpha_edges(result_img)
+        result_img = decontaminate_halo(result_img)
         result_img.save(result_path)
         return {
             "original_path": input_image_path,
@@ -45,6 +54,13 @@ class RMBG1:
         # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
         # mask_img.save(mask_path)
         os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        if self.session is None:
+            self.session = RembgSession("isnet-general-use")
+        else:
+            self.session.set_model("isnet-general-use")
+        result_img = self.session.remove_bg(result_img)
+        result_img = refine_alpha_edges(result_img)
+        result_img = decontaminate_halo(result_img)
         result_img.save(result_path)
         return {
             "original_path": input_image_path,
