@@ -1,4 +1,4 @@
-from rembg_demo import remove
+from rembg import remove
 from rembg.session_factory import new_session
 from PIL import Image
 
