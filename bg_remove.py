@@ -28,13 +28,13 @@ class RMBG1:
         mask_path = f"{output_fold}/{filename_without_exe}_mask_1.4.png"
         result_path = f"{output_fold}/{filename_without_exe}_1.4.png"
         # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
-        # mask_img.save(mask_path)
+        mask_img.save(mask_path)
         os.makedirs(os.path.dirname(result_path), exist_ok=True)
-        if self.session is None:
-            self.session = RembgSession("isnet-general-use")
-        else:
-            self.session.set_model("isnet-general-use")
-        result_img = self.session.remove_bg(result_img)
+        # if self.session is None:
+        #     self.session = RembgSession("isnet-general-use")
+        # else:
+        #     self.session.set_model("isnet-general-use")
+        # result_img = self.session.remove_bg(result_img)
         result_img = refine_alpha_edges(result_img)
         result_img = decontaminate_halo(result_img)
         result_img.save(result_path)
@@ -54,11 +54,11 @@ class RMBG1:
         # os.makedirs(os.path.dirname(mask_path), exist_ok=True)
         # mask_img.save(mask_path)
         os.makedirs(os.path.dirname(result_path), exist_ok=True)
-        if self.session is None:
-            self.session = RembgSession("isnet-general-use")
-        else:
-            self.session.set_model("isnet-general-use")
-        result_img = self.session.remove_bg(result_img)
+        # if self.session is None:
+        #     self.session = RembgSession("isnet-general-use")
+        # else:
+        #     self.session.set_model("isnet-general-use")
+        # result_img = self.session.remove_bg(result_img)
         result_img = refine_alpha_edges(result_img)
         result_img = decontaminate_halo(result_img)
         result_img.save(result_path)

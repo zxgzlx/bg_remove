@@ -46,8 +46,8 @@ def pngs_to_webm(input_dir: str, output_path: str, fps: int = 30, with_alpha: bo
 if __name__ == "__main__":
     # 示例：将 ./xxx 目录下的 PNG 合成 out.webm
     pngs_to_webm(
-        input_dir="output/rmgb2/result/mon001",         # 你的 png 目录
-        output_path="output.webm",
+        input_dir="input/partner_0",         # 你的 png 目录
+        output_path="output/output.webm",
         fps=30,
         with_alpha=True,        # 如果不需要透明，改为 False
     )
